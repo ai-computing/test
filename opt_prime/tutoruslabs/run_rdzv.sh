@@ -119,9 +119,9 @@ for COMBO in "${COMBINATIONS[@]}"; do
         continue
       fi
 
-      RUN_ID="${MODEL_FILENAME}-${BATCH}-${MICRO_BATCH}-${PP}-${TP}-${DP}"
+      RUN_ID_BASE="${MODEL_FILENAME}-${BATCH}-${MICRO_BATCH}-${PP}-${TP}-${DP}"
       echo "================================================="
-      echo "RUN_ID            : $RUN_ID"
+      echo "RUN_ID            : $RUN_ID_BASE"
       echo "Model             : $MODEL_NAME"
       echo "Batch/Micro       : $BATCH / $MICRO_BATCH"
       echo "PP/TP/DP          : $PP / $TP / $DP"
@@ -131,6 +131,7 @@ for COMBO in "${COMBINATIONS[@]}"; do
 
       attempt=1
       while [ $attempt -le $MAX_RETRY ]; do
+        RUN_ID="${RUN_ID_BASE}-try${attempt}"
         echo "[RUN_ID=$RUN_ID][NODE $NODE_RANK] Attempt $attempt/$MAX_RETRY"
 
         # 약간의 랜덤 백오프로 초기 충돌 감소
@@ -143,7 +144,7 @@ for COMBO in "${COMBINATIONS[@]}"; do
           --rdzv_backend=c10d \
           --rdzv_endpoint="${MASTER_ADDR}:${RDZV_PORT}" \
           --rdzv_id="${RUN_ID}" \
-          --rdzv-conf "timeout=900" \
+          --rdzv_conf "min=${NNODES},max=${NNODES},timeout=${RDZV_TIMEOUT},join_timeout=${RDZV_TIMEOUT}"
           pp_train_llama.py \
             --llama_access_token "$LLAMA_TOKEN" \
             --model_name "$MODEL_NAME" \
