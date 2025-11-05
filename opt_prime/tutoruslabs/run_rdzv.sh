@@ -148,7 +148,7 @@ for COMBO in "${COMBINATIONS[@]}"; do
           --rdzv_backend=c10d \
           --rdzv_endpoint="${MASTER_ADDR}:${RDZV_PORT}" \
           --rdzv_id="${RUN_ID}" \
-          --rdzv_timeout="${RDZV_TIMEOUT}" \
+          --rdzv-conf "timeout=900" \
           pp_train_llama.py \
             --llama_access_token "$LLAMA_TOKEN" \
             --model_name "$MODEL_NAME" \
