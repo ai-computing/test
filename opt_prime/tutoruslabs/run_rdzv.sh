@@ -41,12 +41,14 @@ RESULT_FILEPATH="$RESULT_DIR/${MODEL_FILENAME}.csv"
 ############################################
 # NCCL / network sanity (optional but helpful)
 ############################################
-export NCCL_DEBUG=WARN
+export NCCL_DEBUG=INFO
 export TORCH_NCCL_BLOCKING_WAIT=1
 export NCCL_ASYNC_ERROR_HANDLING=1
-# 환경에 따라 조정:
-# export NCCL_IB_DISABLE=1        # IB 없거나 문제 시
-# export NCCL_SOCKET_IFNAME=eth0  # 올바른 NIC로 지정
+
+export NCCL_SOCKET_IFNAME=eth0
+export GLOO_SOCKET_IFNAME=eth0
+
+export NCCL_IB_DISABLE=1
 
 ############################################
 # Generate PP/TP/DP combinations (PP*TP*DP == WORLD_SIZE)
