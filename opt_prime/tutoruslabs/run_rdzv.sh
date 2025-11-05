@@ -62,11 +62,6 @@ for ((PP=2; PP<=WORLD_SIZE; PP*=2)); do
   done
 done
 
-# PP 높은 순(동률 시 TP, 다음 DP)으로 내림차순 정렬
-mapfile -t COMBINATIONS < <(
-  printf '%s\n' "${COMBINATIONS[@]}" | sort -nr -k1,1 -k2,2 -k3,3
-)
-
 echo "======== Generated PP/TP/DP combinations (WORLD_SIZE=$WORLD_SIZE) ========"
 for COMBO in "${COMBINATIONS[@]}"; do
   read PP TP DP <<<"$COMBO"
