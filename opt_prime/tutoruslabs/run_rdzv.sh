@@ -9,20 +9,21 @@
 # "meta-llama/Llama-3.1-8B-Instruct"
 # "meta-llama/Llama-2-13b-chat-hf"
 # "meta-llama/Llama-3.3-70B-Instruct"
-MODEL_NAME="meta-llama/Llama-3.1-8B-Instruct"
 
 # Required args
-if [ $# -lt 3 ]; then
-  echo "Usage: $0 <LLAMA_TOKEN> <NODE_RANK> <MASTER_ADDR> [NNODES] [NPROC_PER_NODE] [RDZV_PORT]"
-  echo "Example: $0 hf_xxxxx 0 10.0.0.11 8 8 29501"
+if [ $# -lt 4 ]; then
+  echo "Usage: $0 <MODEL_NAME> <LLAMA_TOKEN> <NODE_RANK> <MASTER_ADDR> [NNODES] [NPROC_PER_NODE] [RDZV_PORT]"
+  echo "Example: $0 meta-llama/Llama-3.1-8B-Instruct hf_xxxxx 0 10.0.0.11 8 8 29501"
   exit 1
 fi
-LLAMA_TOKEN="$1"
-NODE_RANK="${2}"
-MASTER_ADDR="${3}"
-NNODES="${4:-8}"
-NPROC_PER_NODE="${5:-8}"
-RDZV_PORT="${6:-29501}"
+
+MODEL_NAME="$1"
+LLAMA_TOKEN="$2"
+NODE_RANK="${3}"
+MASTER_ADDR="${4}"
+NNODES="${5:-8}"
+NPROC_PER_NODE="${6:-8}"
+RDZV_PORT="${7:-29501}"
 
 ############################################
 # Derived params
@@ -51,20 +52,20 @@ export NCCL_ASYNC_ERROR_HANDLING=1
 # Generate PP/TP/DP combinations (PP*TP*DP == WORLD_SIZE)
 ############################################
 COMBINATIONS=()
-# PP,TP,DP는 2의 거듭제곱 조합만 시도 (원래 스크립트 관례 유지)
-pow2s=()
-v=1
-while [ $v -le $WORLD_SIZE ]; do pow2s+=($v); v=$((v*2)); done
-
-for PP in "${pow2s[@]}"; do
-  for TP in "${pow2s[@]}"; do
-    for DP in "${pow2s[@]}"; do
+for ((PP=2; PP<=WORLD_SIZE; PP*=2)); do
+  for ((TP=1; TP<=WORLD_SIZE; TP*=2)); do
+    for ((DP=1; DP<=WORLD_SIZE; DP*=2)); do
       if [ $((PP * TP * DP)) -eq $WORLD_SIZE ]; then
         COMBINATIONS+=("$PP $TP $DP")
       fi
     done
   done
 done
+
+# PP 높은 순(동률 시 TP, 다음 DP)으로 내림차순 정렬
+mapfile -t COMBINATIONS < <(
+  printf '%s\n' "${COMBINATIONS[@]}" | sort -nr -k1,1 -k2,2 -k3,3
+)
 
 echo "======== Generated PP/TP/DP combinations (WORLD_SIZE=$WORLD_SIZE) ========"
 for COMBO in "${COMBINATIONS[@]}"; do
