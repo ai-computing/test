@@ -45,10 +45,9 @@ export NCCL_DEBUG=INFO
 export TORCH_NCCL_BLOCKING_WAIT=1
 export NCCL_ASYNC_ERROR_HANDLING=1
 
-export NCCL_SOCKET_IFNAME=enp34s0f0
-export GLOO_SOCKET_IFNAME=enp34s0f0
-
-export NCCL_IB_DISABLE=1
+#export NCCL_SOCKET_IFNAME=enp34s0f0
+#export GLOO_SOCKET_IFNAME=enp34s0f0
+#export NCCL_IB_DISABLE=1
 
 ############################################
 # Generate PP/TP/DP combinations (PP*TP*DP == WORLD_SIZE)
@@ -146,7 +145,7 @@ for COMBO in "${COMBINATIONS[@]}"; do
           --rdzv_backend=c10d \
           --rdzv_endpoint="${MASTER_ADDR}:${RDZV_PORT}" \
           --rdzv_id="${RUN_ID}" \
-          --rdzv_conf "min=${NNODES},max=${NNODES},timeout=${RDZV_TIMEOUT},join_timeout=${RDZV_TIMEOUT}" \
+          --rdzv_conf "timeout=${RDZV_TIMEOUT}" \
           pp_train_llama.py \
             --llama_access_token "$LLAMA_TOKEN" \
             --model_name "$MODEL_NAME" \
