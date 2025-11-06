@@ -151,10 +151,12 @@ for COMBO in "${COMBINATIONS[@]}"; do
           --nproc_per_node="${NPROC_PER_NODE}" \
           --nnodes="${NNODES}" \
           --node_rank="${NODE_RANK}" \
-          --rdzv_backend=c10d \
-          --rdzv_endpoint="${MASTER_ADDR}:${RDZV_PORT}" \
-          --rdzv_id="${RUN_ID}" \
-          --rdzv_conf "timeout=${RDZV_TIMEOUT}" \
+          --master_addr="${MASTER_ADDR}" \
+          --master_port=29500 \
+          #--rdzv_backend=c10d \
+          #--rdzv_endpoint="${MASTER_ADDR}:${RDZV_PORT}" \
+          #--rdzv_id="${RUN_ID}" \
+          #--rdzv_conf "timeout=${RDZV_TIMEOUT}" \
           pp_train_llama.py \
             --llama_access_token "$LLAMA_TOKEN" \
             --model_name "$MODEL_NAME" \
