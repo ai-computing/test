@@ -84,8 +84,6 @@ for BATCH in "${BATCH_SIZES[@]}"; do
         --nproc_per_node=$NPROC_PER_NODE \
         --nnodes=$NNODES \
         --node_rank=$NODE_RANK \
-        #--master_addr=$MASTER_ADDR \
-        #--master_port=29500 \
         --rdzv_backend=c10d \
         --rdzv_endpoint="${MASTER_ADDR}:${RDZV_PORT}" \
         --rdzv_id="${RUN_ID}" \
