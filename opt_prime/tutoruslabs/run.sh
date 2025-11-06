@@ -1,5 +1,8 @@
 #!/bin/bash
 
+############################################
+# User params
+############################################
 # models
 # "meta-llama/Llama-3.2-1B"
 # "meta-llama/Llama-3.2-3B"
@@ -7,24 +10,27 @@
 # "meta-llama/Llama-2-13b-chat-hf"
 # "meta-llama/Llama-3.3-70B-Instruct"
 
-MODEL_NAME="meta-llama/Llama-3.1-8B-Instruct"
-
-if [ $# -lt 3 ]; then
-  echo "Usage: $0 <LLAMA_TOKEN> <NODE_RANK> <MASTER_ADDR>"
-  echo "Example: $0 hf_xxxxx 0 127.0.0.1"
+# Required args
+if [ $# -lt 4 ]; then
+  echo "Usage: $0 <MODEL_NAME> <LLAMA_TOKEN> <NODE_RANK> <MASTER_ADDR> [NNODES] [NPROC_PER_NODE]"
+  echo "Example: $0 meta-llama/Llama-3.1-8B-Instruct hf_xxxxx 0 10.0.0.11 8 8"
   exit 1
 fi
-LLAMA_TOKEN="$1"
-NODE_RANK="$2"
-MASTER_ADDR="$3"
+
+MODEL_NAME="$1"
+LLAMA_TOKEN="$2"
+NODE_RANK="${3}"
+MASTER_ADDR="${4}"
+NNODES="${5:-8}"
+NPROC_PER_NODE="${6:-8}"
+
+WORLD_SIZE=$(( NNODES * NPROC_PER_NODE ))
 
 BATCH_SIZES=(32 64 128 256 512 1024 2048 4096)
 MICRO_BATCH_SIZES=(4 8 16 32 64 128 256 512 1024 2048)
-WORLD_SIZE=16
 
 RESULT_DIR="results"
 mkdir -p "$RESULT_DIR"
-
 MODEL_FILENAME=$(echo "$MODEL_NAME" | cut -d'/' -f2)
 RESULT_FILEPATH="$RESULT_DIR/${MODEL_FILENAME}.csv"
 
@@ -71,8 +77,8 @@ for BATCH in "${BATCH_SIZES[@]}"; do
       echo "================================================="
 
       CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 torchrun \
-        --nproc_per_node=8 \
-        --nnodes=2 \
+        --nproc_per_node=$NPROC_PER_NODE \
+        --nnodes=$NNODES \
         --node_rank=$NODE_RANK \
         --master_addr=$MASTER_ADDR \
         --master_port=29500 \
@@ -99,7 +105,7 @@ for BATCH in "${BATCH_SIZES[@]}"; do
       ( head -n 1 "$RESULT_FILEPATH" && tail -n +2 "$RESULT_FILEPATH" | sort -u ) > "${RESULT_FILEPATH}.tmp" && mv "${RESULT_FILEPATH}.tmp" "$RESULT_FILEPATH"
       echo ">>> Duplicate lines removed from $RESULT_FILEPATH"
 
-      sleep 10
+      sleep 30
     done
   done
 done
