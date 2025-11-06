@@ -38,16 +38,18 @@ mkdir -p "$RESULT_DIR"
 MODEL_FILENAME=$(echo "$MODEL_NAME" | cut -d'/' -f2)
 RESULT_FILEPATH="$RESULT_DIR/${MODEL_FILENAME}.csv"
 
+LOG_DIR="logs"
+mkdir -p "$LOG_DIR"
+
 ############################################
 # NCCL / network sanity (optional but helpful)
 ############################################
 export NCCL_DEBUG=INFO
 export TORCH_NCCL_BLOCKING_WAIT=1
 export NCCL_ASYNC_ERROR_HANDLING=1
-
-#export NCCL_SOCKET_IFNAME=enp34s0f0
-#export GLOO_SOCKET_IFNAME=enp34s0f0
-#export NCCL_IB_DISABLE=1
+# export NCCL_SOCKET_IFNAME=enp34s0f0
+# export GLOO_SOCKET_IFNAME=enp34s0f0
+# export NCCL_IB_DISABLE=1
 
 ############################################
 # Generate PP/TP/DP combinations (PP*TP*DP == WORLD_SIZE)
@@ -79,14 +81,8 @@ cleanup() {
 }
 trap cleanup INT TERM
 
-have_nc=0
-if command -v nc >/dev/null 2>&1; then have_nc=1; fi
-
 wait_master_tcp() {
   local host="$1" port="$2"
-  # rendezvous는 rank0가 먼저 떠야 포트가 열립니다.
-  # 순서가 바뀌어도 아래 retry loop가 복구하므로 이 체크는 선택 사항입니다.
-  # 다만 네트워크가 죽어있을 때 빨리 감지하려고 가벼운 ping만 합니다.
   if ping -c 1 -W 1 "$host" >/dev/null 2>&1; then
     echo "[NODE $NODE_RANK] master host reachable: $host"
   else
@@ -99,6 +95,14 @@ dedup_csv_if_exists() {
     ( head -n 1 "$RESULT_FILEPATH" && tail -n +2 "$RESULT_FILEPATH" | sort -u ) > "${RESULT_FILEPATH}.tmp" && mv "${RESULT_FILEPATH}.tmp" "$RESULT_FILEPATH"
     echo ">>> Deduped: $RESULT_FILEPATH"
   fi
+}
+
+# OOM 감지: 흔한 에러 문구들 매칭
+is_oom() {
+  local file="$1"
+  grep -qiE \
+    "out of memory|CUDA.*out of memory|CUBLAS_STATUS_ALLOC_FAILED|cudnn.*alloc|std::bad_alloc|terminate called after throwing an instance of 'std::bad_alloc'|RuntimeError:.*(out of memory|OOM)" \
+    "$file"
 }
 
 ############################################
@@ -131,13 +135,18 @@ for COMBO in "${COMBINATIONS[@]}"; do
       echo "================================================="
 
       attempt=1
+      aborted_on_oom=0
+
       while [ $attempt -le $MAX_RETRY ]; do
         RUN_ID="${RUN_ID_BASE}-try${attempt}"
+        LOG_FILE="$LOG_DIR/${RUN_ID}.log"
+
         echo "[RUN_ID=$RUN_ID][NODE $NODE_RANK] Attempt $attempt/$MAX_RETRY"
 
         # 약간의 랜덤 백오프로 초기 충돌 감소
         sleep $((RANDOM % 3))
 
+        # torchrun 출력 로그 저장, 실제 종료코드는 PIPESTATUS[0]로 획득
         CUDA_VISIBLE_DEVICES=$(seq -s, 0 $((NPROC_PER_NODE-1))) torchrun \
           --nproc_per_node="${NPROC_PER_NODE}" \
           --nnodes="${NNODES}" \
@@ -153,20 +162,30 @@ for COMBO in "${COMBINATIONS[@]}"; do
             --micro_batch_size $MICRO_BATCH \
             --pp_size $PP \
             --tp_size $TP \
-            --dp_size $DP
+            --dp_size $DP \
+          2>&1 | tee "$LOG_FILE"
+        exit_code=${PIPESTATUS[0]}
 
-        exit_code=$?
         if [ $exit_code -eq 0 ]; then
           echo "[RUN_ID=$RUN_ID] SUCCESS"
           break
         else
+          # OOM이면 재시도하지 않고 다음 스텝으로 즉시 이동
+          if is_oom "$LOG_FILE"; then
+            echo "[RUN_ID=$RUN_ID] DETECTED OOM. Skipping retries and moving to next step."
+            aborted_on_oom=1
+            break
+          fi
           echo "[RUN_ID=$RUN_ID] FAIL(exit=$exit_code). Backoff & retry..."
           sleep $((RANDOM % 10 + 5))
         fi
+
         attempt=$((attempt+1))
       done
 
-      if [ $attempt -gt $MAX_RETRY ]; then
+      if [ $aborted_on_oom -eq 1 ]; then
+        echo "[RUN_ID=$RUN_ID] OOM encountered -> proceed to next configuration."
+      elif [ $attempt -gt $MAX_RETRY ]; then
         echo "[RUN_ID=$RUN_ID] GAVE UP after $MAX_RETRY attempts."
       fi
 
