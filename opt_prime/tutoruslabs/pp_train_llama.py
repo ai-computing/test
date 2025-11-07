@@ -247,6 +247,8 @@ finally:
             #dist.barrier()
             #torch.cuda.synchronize()
             dist.destroy_process_group()
+            time.sleep(0.2)
+            sys.exit(0)
         except Exception as e:
             print(e)
             os._exit(30)
