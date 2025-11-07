@@ -71,7 +71,7 @@ for BATCH in "${BATCH_SIZES[@]}"; do
       RDZV_TIMEOUT=900
 
       echo "================================================="
-      echo "RUN_ID            : $RUN_ID_BASE"
+      echo "RUN_ID            : $RUN_ID"
       echo "Model             : $MODEL_NAME"
       echo "Batch/Micro       : $BATCH / $MICRO_BATCH"
       echo "PP/TP/DP          : $PP / $TP / $DP"
@@ -79,6 +79,21 @@ for BATCH in "${BATCH_SIZES[@]}"; do
       echo "RDZV              : c10d ${MASTER_ADDR}:${RDZV_PORT} (timeout=${RDZV_TIMEOUT}s)"
       echo "================================================="
 
+      if [ "$NODE_RANK" -eq 0 ]; then
+        ROLE="master"
+      else
+        ROLE="worker"
+      fi
+      echo ">>> This node is acting as: $ROLE"
+
+      if [ "$ROLE" = "worker" ]; then
+        echo "Waiting for master rendezvous (${MASTER_ADDR}:${RDZV_PORT})..."
+        while ! nc -z "$MASTER_ADDR" "$RDZV_PORT"; do
+          sleep 3
+          echo "Still waiting for master..."
+        done
+        echo "Master is up, starting torchrun."
+      fi
 
       CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 torchrun \
         --nproc_per_node=$NPROC_PER_NODE \
@@ -111,7 +126,7 @@ for BATCH in "${BATCH_SIZES[@]}"; do
       ( head -n 1 "$RESULT_FILEPATH" && tail -n +2 "$RESULT_FILEPATH" | sort -u ) > "${RESULT_FILEPATH}.tmp" && mv "${RESULT_FILEPATH}.tmp" "$RESULT_FILEPATH"
       echo ">>> Duplicate lines removed from $RESULT_FILEPATH"
 
-      sleep 30
+      sleep 10
     done
   done
 done
