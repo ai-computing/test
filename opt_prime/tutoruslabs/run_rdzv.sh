@@ -1,6 +1,7 @@
 #!/bin/bash
 
 export NCCL_DEBUG=ERROR
+export TORCH_DIST_INIT_BARRIER=1
 
 ############################################
 # User params
@@ -56,6 +57,8 @@ for COMBO in "${COMBINATIONS[@]}"; do
 done
 echo "================================================="
 
+COUNTER=0
+
 # 모델 학습
 for BATCH in "${BATCH_SIZES[@]}"; do
   for MICRO_BATCH in "${MICRO_BATCH_SIZES[@]}"; do
@@ -69,7 +72,10 @@ for BATCH in "${BATCH_SIZES[@]}"; do
       read PP TP DP <<<"$COMBO"
       
       RUN_ID="${MODEL_FILENAME}-${BATCH}-${MICRO_BATCH}-${PP}-${TP}-${DP}"
-      RDZV_PORT=29500
+      
+      COUNTER=$((COUNTER+1))
+      RDZV_PORT=$((29500 + (COUNTER % 200)))
+
       RDZV_TIMEOUT=900
 
       echo "================================================="
