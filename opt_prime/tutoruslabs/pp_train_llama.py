@@ -214,6 +214,8 @@ try:
         print('Time elapsed: %.3f sec ' % (elapsed_time))
         write_result(args.batch_size, args.micro_batch_size, args.pp_size, args.tp_size, args.dp_size, f"{elapsed_time:.3f}", RESULT_FILEPATH)
 
+        exit_code = 0
+
     if dist.is_initialized():
         try:
             dist.barrier()
@@ -229,26 +231,25 @@ try:
 except torch.cuda.OutOfMemoryError as e:
     print(f"ERROR: Out of GPU memory. {e}")
     write_result(args.batch_size, args.micro_batch_size, args.pp_size, args.tp_size, args.dp_size, "OOM ERROR", RESULT_FILEPATH)
-    os._exit(10)
+    exit_code = 10
 
 except dist.DistBackendError as dbe:
     print(f"ERROR: Distributed communication failed. {dbe}")
     write_result(args.batch_size, args.micro_batch_size, args.pp_size, args.tp_size, args.dp_size, "DIST ERROR", RESULT_FILEPATH)
-    os._exit(20)
+    exit_code = 20
 
 except Exception as e:
     print(f"ERROR: Unexpected error. {e}")
     write_result(args.batch_size, args.micro_batch_size, args.pp_size, args.tp_size, args.dp_size, "EXCEPTION", RESULT_FILEPATH)
-    os._exit(30)
+    exit_code = 30
 
 finally:
     if dist.is_initialized():
         try:
             #dist.barrier()
-            #torch.cuda.synchronize()
+            torch.cuda.synchronize()
             dist.destroy_process_group()
-            time.sleep(0.2)
-            sys.exit(0)
         except Exception as e:
             print(e)
-            os._exit(30)
+
+sys.exit(exit_code)
