@@ -127,15 +127,15 @@ for BATCH in "${BATCH_SIZES[@]}"; do
 
       echo ">>> Cleaning up GPU processes..."
       # Kill torchrun / python / CUDA processes that might hang
-      sudo pkill -9 -f "torchrun" || true
-      sudo pkill -9 -f "pp_train_llama.py" || true
-      sudo pkill -9 -f "python" || true
+      pkill -9 -f "torchrun" || true
+      pkill -9 -f "pp_train_llama.py" || true
+      pkill -9 -f "python" || true
       sleep 3
       # Check if any GPU still in use, and free it
-      sudo fuser -v /dev/nvidia* -k 2>/dev/null || true
+      fuser -v /dev/nvidia* -k 2>/dev/null || true
       echo ">>> GPU cleanup complete."
 
-      
+
       # $? 변수로 종료 상태 코드 확인
       if [ $? -eq 0 ]; then
         echo "SUCCESS: pp_train_llama.py completed successfully."
