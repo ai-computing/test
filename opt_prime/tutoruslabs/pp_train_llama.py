@@ -149,6 +149,14 @@ try:
 
     epochs = 1 # The number of epochs
 
+    num_mb = args.batch_size // args.micro_batch_size
+    if args.batch_size % args.micro_batch_size != 0:
+        raise RuntimeError("batch_size % micro_batch_size != 0 → 1f1b 위험")
+
+    if num_mb < args.pp_size:
+        raise RuntimeError(f"num_microbatches({num_mb}) < pp_size({args.pp_size}) → 1f1b 데드락 위험")
+
+
     def train():
 
         optimus_p.train() # turn on the train mode
@@ -251,13 +259,26 @@ except Exception as e:
 finally:
     if dist.is_initialized():
         try:
+            # 1) 내 랭크 실패 여부 텐서
+            flag = torch.tensor([1 if EXIT_CODE != 0 else 0], device='cuda')
+
+            # 2) 전 랭크 합의: 하나라도 실패하면 합계 > 0
+            dist.all_reduce(flag, op=dist.ReduceOp.SUM)
+            global_failed = (flag.item() > 0)
+
+            # 3) 하나라도 실패했다면 모두 실패 코드로
+            if global_failed and EXIT_CODE == 0:
+                EXIT_CODE = 40  # peer failed
+            """
             if EXIT_CODE == 0:
                 #dist.barrier()
                 #torch.cuda.synchronize()
                 pass
+            """
             dist.destroy_process_group()
+            print(f"[rank:{dist.get_rank()}] process group destroyed.")
         except Exception as e:
-            print(e)
+            print(f"[rank:{dist.get_rank()}] destroy_process_group failed: {e}")
             if EXIT_CODE == 0:
                 EXIT_CODE = 40
 
