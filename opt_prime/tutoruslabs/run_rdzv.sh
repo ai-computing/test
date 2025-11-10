@@ -137,14 +137,15 @@ for BATCH in "${BATCH_SIZES[@]}"; do
       echo ">>> GPU cleanup complete."
 
 
-      # $? 변수로 종료 상태 코드 확인
-      if [ $EXIT_CODE -eq 0 ]; then
-        echo "SUCCESS: pp_train_llama.py completed successfully."
-        echo "--- END ---"
-        break 3
-      else
-        echo "FAILED (exit=$EXIT_CODE)"
-      fi
+      if [ "$ROLE" = "master" ]; then
+        # $? 변수로 종료 상태 코드 확인
+        if [ $EXIT_CODE -eq 0 ]; then
+          echo "SUCCESS: pp_train_llama.py completed successfully."
+          echo "--- END ---"
+          break 3
+        else
+          echo "FAILED (exit=$EXIT_CODE)"
+        fi
 
       echo ">>> Done: batch=$BATCH, micro_batch=$MICRO_BATCH, pp=$PP, tp=$TP, dp=$DP"
       echo ""

@@ -57,6 +57,7 @@ def write_result(batch_size, micro_batch_size, pp_size, tp_size, dp_size, result
     with open(result_filepath, "a", encoding="utf-8") as file:
         file.write(f"{batch_size},{micro_batch_size},{pp_size},{tp_size},{dp_size},{result}\n")
 
+EXIT_CODE=0
 
 try:
     access_token = args.llama_access_token
@@ -146,7 +147,6 @@ try:
     nbatches = len(dataloader)
     print(f"nbatches={nbatches}")
 
-
     epochs = 1 # The number of epochs
 
     def train():
@@ -204,7 +204,9 @@ try:
 
     for epoch in range(1, epochs + 1):
         epoch_start_time = time.time()
+        print("===TRAIN START===\n")
         train()
+        print("===TRAIN FINISHED===\n")
         scheduler.step()
 
     if optimus_p.get_rank() == 0:
@@ -214,7 +216,7 @@ try:
         print('Time elapsed: %.3f sec ' % (elapsed_time))
         write_result(args.batch_size, args.micro_batch_size, args.pp_size, args.tp_size, args.dp_size, f"{elapsed_time:.3f}", RESULT_FILEPATH)
 
-        exit_code = 0
+        EXIT_CODE = 0
 
     """
     if dist.is_initialized():
@@ -233,29 +235,29 @@ try:
 except torch.cuda.OutOfMemoryError as e:
     print(f"ERROR: Out of GPU memory. {e}")
     write_result(args.batch_size, args.micro_batch_size, args.pp_size, args.tp_size, args.dp_size, "OOM ERROR", RESULT_FILEPATH)
-    exit_code = 10
+    EXIT_CODE = 10
 
 except dist.DistBackendError as dbe:
     print(f"ERROR: Distributed communication failed. {dbe}")
     write_result(args.batch_size, args.micro_batch_size, args.pp_size, args.tp_size, args.dp_size, "DIST ERROR", RESULT_FILEPATH)
-    exit_code = 20
+    EXIT_CODE = 20
 
 except Exception as e:
     print(f"ERROR: Unexpected error. {e}")
     write_result(args.batch_size, args.micro_batch_size, args.pp_size, args.tp_size, args.dp_size, "EXCEPTION", RESULT_FILEPATH)
-    exit_code = 30
+    EXIT_CODE = 30
 
 finally:
     if dist.is_initialized():
         try:
-            if exit_code == 0:
+            if EXIT_CODE == 0:
                 dist.barrier()
                 torch.cuda.synchronize()
             dist.destroy_process_group()
         except Exception as e:
             print(e)
-            if exit_code == 0:
-                exit_code = 40
-                
-print(">>> EXIT_CODE: ", exit_code)
-sys.exit(exit_code)
+            if EXIT_CODE == 0:
+                EXIT_CODE = 40
+
+print(">>> EXIT_CODE: ", EXIT_CODE)
+sys.exit(EXIT_CODE)
