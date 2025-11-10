@@ -163,13 +163,14 @@ try:
 
             # prepare input and label
             if optimus_p.is_first_stage():
-                tokens =  tokenizer(batch, padding=True, truncation=True, max_length=1024,return_tensors="pt")
+                tokens = tokenizer(batch, padding=True, truncation=True, max_length=1024, return_tensors="pt")
                 data, labels = tokens.input_ids, tokens.input_ids
 
             labels = optimus_p.move_labels2last_stage(labels)
 
             optimus_p.optimizer.zero_grad()
 
+            print(">>> OPTIMUS RUN\n")
             #optimus_p.run(data, labels)
             #optimus_p.run(data, labels, mode="gpipe")
             optimus_p.run(data, labels, mode="1f1b")
@@ -179,7 +180,7 @@ try:
             else:
                 loss = None
 
-
+            print(">>> OPTIMUS STEP\n")
             optimus_p.optimizer.step()
 
             if optimus_p.is_last_stage():
@@ -204,9 +205,9 @@ try:
 
     for epoch in range(1, epochs + 1):
         epoch_start_time = time.time()
-        print("===TRAIN START===\n")
+        print("=== TRAIN START ===\n")
         train()
-        print("===TRAIN FINISHED===\n")
+        print("=== TRAIN FINISHED ===\n")
         scheduler.step()
 
     if optimus_p.get_rank() == 0:
@@ -251,8 +252,9 @@ finally:
     if dist.is_initialized():
         try:
             if EXIT_CODE == 0:
-                dist.barrier()
-                torch.cuda.synchronize()
+                #dist.barrier()
+                #torch.cuda.synchronize()
+                pass
             dist.destroy_process_group()
         except Exception as e:
             print(e)
