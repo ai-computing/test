@@ -216,6 +216,7 @@ try:
 
         exit_code = 0
 
+    """
     if dist.is_initialized():
         try:
             dist.barrier()
@@ -227,6 +228,7 @@ try:
             print(f"Cleanp on rank {optimus_p.get_rank()}: {e}")
 
         print(f"[rank:{optimus_p.get_rank()}, run completed ...")
+    """
 
 except torch.cuda.OutOfMemoryError as e:
     print(f"ERROR: Out of GPU memory. {e}")
@@ -246,11 +248,14 @@ except Exception as e:
 finally:
     if dist.is_initialized():
         try:
-            #dist.barrier()
-            torch.cuda.synchronize()
+            if exit_code == 0:
+                dist.barrier()
+                torch.cuda.synchronize()
             dist.destroy_process_group()
         except Exception as e:
             print(e)
-
+            if exit_code == 0:
+                exit_code = 40
+                
 print(">>> EXIT_CODE: ", exit_code)
 sys.exit(exit_code)
