@@ -50,8 +50,8 @@ for ((PP=2; PP<=WORLD_SIZE; PP*=2)); do
   done
 done
 # 정렬: PP desc, TP desc, DP desc
-IFS=$'\n' read -r -d '' -a COMBINATIONS < <(
-  printf '%s\n' "${COMBINATIONS_RAW[@]}" | sort -k1,1nr -k2,2nr -k3,3nr && printf '\0'
+mapfile -t COMBINATIONS < <(
+  printf '%s\n' "${COMBINATIONS[@]}" | sort -k1,1nr -k2,2nr -k3,3nr
 )
 
 echo "======== Generated PP/TP/DP combinations ========"
