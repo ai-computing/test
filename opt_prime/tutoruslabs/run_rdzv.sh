@@ -29,8 +29,8 @@ NPROC_PER_NODE="${6:-8}"
 
 WORLD_SIZE=$(( NNODES * NPROC_PER_NODE ))
 
-BATCH_SIZES=(32 64 128 256 512 1024 2048 4096)
-MICRO_BATCH_SIZES=(4 8 16 32 64 128 256 512 1024 2048)
+BATCH_SIZES=(4096 2048 1024 512 256 128 64 32)
+MICRO_BATCH_SIZES=(2048 1024 512 256 128 64 32 16 8 4)
 
 RESULT_DIR="results"
 mkdir -p "$RESULT_DIR"
@@ -49,6 +49,10 @@ for ((PP=2; PP<=WORLD_SIZE; PP*=2)); do
     done
   done
 done
+# 정렬: PP desc, TP desc, DP desc
+IFS=$'\n' read -r -d '' -a COMBINATIONS < <(
+  printf '%s\n' "${COMBINATIONS_RAW[@]}" | sort -k1,1nr -k2,2nr -k3,3nr && printf '\0'
+)
 
 echo "======== Generated PP/TP/DP combinations ========"
 for COMBO in "${COMBINATIONS[@]}"; do
@@ -123,6 +127,8 @@ for BATCH in "${BATCH_SIZES[@]}"; do
       # $? 변수로 종료 상태 코드 확인
       if [ $? -eq 0 ]; then
         echo "SUCCESS: pp_train_llama.py completed successfully."
+        echo "--- END ---"
+        break 3
       else
         echo "FAILED: pp_train_llama.py failed. Exiting script."
       fi
