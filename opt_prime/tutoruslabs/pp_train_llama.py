@@ -252,4 +252,5 @@ finally:
         except Exception as e:
             print(e)
 
+print(">>> EXIT_CODE: ", exit_code)
 sys.exit(exit_code)
