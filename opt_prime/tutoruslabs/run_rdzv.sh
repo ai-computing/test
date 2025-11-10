@@ -1,7 +1,9 @@
 #!/bin/bash
 
 export NCCL_DEBUG=ERROR
-#export TORCH_DIST_INIT_BARRIER=1
+export NCCL_ASYNC_ERROR_HANDLING=1
+export NCCL_BLOCKING_WAIT=1
+export TORCH_DIST_INIT_BARRIER=1
 
 ############################################
 # User params
