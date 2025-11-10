@@ -50,9 +50,9 @@ for ((PP=2; PP<=WORLD_SIZE; PP*=2)); do
   done
 done
 # 정렬: PP desc, TP desc, DP desc
-#mapfile -t COMBINATIONS < <(
-#  printf '%s\n' "${COMBINATIONS[@]}" | sort -k1,1nr -k2,2nr -k3,3nr
-#)
+mapfile -t COMBINATIONS < <(
+  printf '%s\n' "${COMBINATIONS[@]}" | sort -k1,1nr -k2,2nr -k3,3nr
+)
 
 echo "======== Generated PP/TP/DP combinations ========"
 for COMBO in "${COMBINATIONS[@]}"; do
@@ -146,6 +146,7 @@ for BATCH in "${BATCH_SIZES[@]}"; do
         else
           echo "FAILED (exit=$EXIT_CODE)"
         fi
+      fi
 
       echo ">>> Done: batch=$BATCH, micro_batch=$MICRO_BATCH, pp=$PP, tp=$TP, dp=$DP"
       echo ""
