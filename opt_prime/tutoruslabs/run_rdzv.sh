@@ -1,8 +1,9 @@
 #!/bin/bash
 
 export NCCL_DEBUG=ERROR
-#export NCCL_ASYNC_ERROR_HANDLING=1
-#export NCCL_BLOCKING_WAIT=1
+# 피어가 죽으면 다른 랭크도 통신 에러로 즉시 터지도록
+export NCCL_ASYNC_ERROR_HANDLING=1
+export NCCL_BLOCKING_WAIT=1
 #export TORCH_DIST_INIT_BARRIER=1
 
 ############################################

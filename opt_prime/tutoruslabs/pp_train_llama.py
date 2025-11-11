@@ -259,17 +259,20 @@ except Exception as e:
 finally:
     if dist.is_initialized():
         try:
+            """
             device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
             flag = torch.tensor([1 if EXIT_CODE != 0 else 0], device=device)
             dist.all_reduce(flag, op=dist.ReduceOp.SUM)
             global_failed = (flag.item() > 0)
             if global_failed and EXIT_CODE == 0:
                 EXIT_CODE = 40  # peer failed
+            """
 
             #dist.barrier()
             #torch.cuda.synchronize()
             dist.destroy_process_group()
             print(f"[rank:{dist.get_rank()}] process group destroyed.")
+            
         except Exception as e:
             print(f"[rank:{dist.get_rank()}] destroy_process_group failed: {e}")
             if EXIT_CODE == 0:
