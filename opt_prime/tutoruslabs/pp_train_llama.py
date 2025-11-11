@@ -245,16 +245,19 @@ except torch.cuda.OutOfMemoryError as e:
     print(f"ERROR: Out of GPU memory. {e}")
     #write_result(args.batch_size, args.micro_batch_size, args.pp_size, args.tp_size, args.dp_size, "OOM ERROR", RESULT_FILEPATH)
     EXIT_CODE = 10
+    sys.exit(EXIT_CODE)
 
 except dist.DistBackendError as dbe:
     print(f"ERROR: Distributed communication failed. {dbe}")
     #write_result(args.batch_size, args.micro_batch_size, args.pp_size, args.tp_size, args.dp_size, "DIST ERROR", RESULT_FILEPATH)
     EXIT_CODE = 20
+    sys.exit(EXIT_CODE)
 
 except Exception as e:
     print(f"ERROR: Unexpected error. {e}")
     #write_result(args.batch_size, args.micro_batch_size, args.pp_size, args.tp_size, args.dp_size, "EXCEPTION", RESULT_FILEPATH)
     EXIT_CODE = 30
+    sys.exit(EXIT_CODE)
 
 finally:
     if dist.is_initialized():
@@ -272,11 +275,11 @@ finally:
             #torch.cuda.synchronize()
             dist.destroy_process_group()
             print(f"[rank:{dist.get_rank()}] process group destroyed.")
-            
+
         except Exception as e:
             print(f"[rank:{dist.get_rank()}] destroy_process_group failed: {e}")
-            if EXIT_CODE == 0:
-                EXIT_CODE = 41
+            EXIT_CODE = 41
+            sys.exit(EXIT_CODE)
 
 print(">>> EXIT_CODE: ", EXIT_CODE)
 sys.exit(EXIT_CODE)

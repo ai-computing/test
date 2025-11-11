@@ -48,7 +48,7 @@ fi
 status_from_exit() {
   case "$1" in
     0)  echo "" ;;                 # 성공 시엔 숫자 시간 기록이 들어감
-    1)  echo "1F1B DEADLOCK" ;;
+    1)  echo "#MB < PP(1F1B DEADLOCK)" ;;
     10) echo "OOM ERROR" ;;
     20) echo "DIST ERROR" ;;
     30) echo "EXCEPTION" ;;
