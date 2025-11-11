@@ -227,8 +227,9 @@ try:
             dist.destroy_process_group()
         except Exception as e:
             print(f"Cleanp on rank {optimus_p.get_rank()}: {e}")
-    """
+    
         print(f"[rank:{optimus_p.get_rank()}, run completed ...")
+    """
     
 
 except torch.cuda.OutOfMemoryError as e:
