@@ -223,11 +223,10 @@ try:
         elapsed_time = tock - tick
 
         print('Time elapsed: %.3f sec ' % (elapsed_time))
-        write_result(args.batch_size, args.micro_batch_size, args.pp_size, args.tp_size, args.dp_size, f"{elapsed_time:.3f}", RESULT_FILEPATH)
+        #write_result(args.batch_size, args.micro_batch_size, args.pp_size, args.tp_size, args.dp_size, f"{elapsed_time:.3f}", RESULT_FILEPATH)
 
         EXIT_CODE = 0
 
-    """
     if dist.is_initialized():
         try:
             dist.barrier()
@@ -239,42 +238,35 @@ try:
             print(f"Cleanp on rank {optimus_p.get_rank()}: {e}")
 
         print(f"[rank:{optimus_p.get_rank()}, run completed ...")
-    """
+    
 
 except torch.cuda.OutOfMemoryError as e:
     print(f"ERROR: Out of GPU memory. {e}")
-    write_result(args.batch_size, args.micro_batch_size, args.pp_size, args.tp_size, args.dp_size, "OOM ERROR", RESULT_FILEPATH)
+    #write_result(args.batch_size, args.micro_batch_size, args.pp_size, args.tp_size, args.dp_size, "OOM ERROR", RESULT_FILEPATH)
     EXIT_CODE = 10
 
 except dist.DistBackendError as dbe:
     print(f"ERROR: Distributed communication failed. {dbe}")
-    write_result(args.batch_size, args.micro_batch_size, args.pp_size, args.tp_size, args.dp_size, "DIST ERROR", RESULT_FILEPATH)
+    #write_result(args.batch_size, args.micro_batch_size, args.pp_size, args.tp_size, args.dp_size, "DIST ERROR", RESULT_FILEPATH)
     EXIT_CODE = 20
 
 except Exception as e:
     print(f"ERROR: Unexpected error. {e}")
-    write_result(args.batch_size, args.micro_batch_size, args.pp_size, args.tp_size, args.dp_size, "EXCEPTION", RESULT_FILEPATH)
+    #write_result(args.batch_size, args.micro_batch_size, args.pp_size, args.tp_size, args.dp_size, "EXCEPTION", RESULT_FILEPATH)
     EXIT_CODE = 30
 
 finally:
     if dist.is_initialized():
         try:
-            # 1) 내 랭크 실패 여부 텐서
-            flag = torch.tensor([1 if EXIT_CODE != 0 else 0], device='cuda')
-
-            # 2) 전 랭크 합의: 하나라도 실패하면 합계 > 0
+            device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            flag = torch.tensor([1 if EXIT_CODE != 0 else 0], device=device)
             dist.all_reduce(flag, op=dist.ReduceOp.SUM)
             global_failed = (flag.item() > 0)
-
-            # 3) 하나라도 실패했다면 모두 실패 코드로
             if global_failed and EXIT_CODE == 0:
                 EXIT_CODE = 40  # peer failed
-            """
-            if EXIT_CODE == 0:
-                #dist.barrier()
-                #torch.cuda.synchronize()
-                pass
-            """
+                
+            #dist.barrier()
+            #torch.cuda.synchronize()
             dist.destroy_process_group()
             print(f"[rank:{dist.get_rank()}] process group destroyed.")
         except Exception as e:

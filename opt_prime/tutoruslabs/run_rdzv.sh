@@ -37,8 +37,25 @@ MICRO_BATCH_SIZES=(2048 1024 512 256 128 64 32 16 8 4)
 RESULT_DIR="results"
 mkdir -p "$RESULT_DIR"
 MODEL_FILENAME=$(echo "$MODEL_NAME" | cut -d'/' -f2)
-RESULT_FILEPATH="$RESULT_DIR/${MODEL_FILENAME}.csv"
 
+# 마스터 전용 결과 파일
+RESULT_FILEPATH="$RESULT_DIR/${MODEL_FILENAME}.csv"
+if [ "$NODE_RANK" -eq 0 ] && [ ! -f "$RESULT_FILEPATH" ]; then
+  echo "batch_size,micro_batch_size,pp_size,tp_size,dp_size,training_time(sec)" > "$RESULT_FILEPATH"
+fi
+
+status_from_exit() {
+  case "$1" in
+    0)  echo "" ;;                 # 성공 시엔 숫자 시간 기록이 들어감
+    10) echo "OOM ERROR" ;;
+    20) echo "DIST ERROR" ;;
+    30) echo "EXCEPTION" ;;
+    40) echo "PEER FAILED" ;;
+    41) echo "FINALIZE ERROR" ;;
+    50) echo "TIMEOUT" ;;
+    *)  echo "FAIL($1)" ;;
+  esac
+}
 
 # PP/TP/DP 조합 생성
 COMBINATIONS=()
@@ -93,12 +110,8 @@ for BATCH in "${BATCH_SIZES[@]}"; do
       echo "RDZV              : c10d ${MASTER_ADDR}:${RDZV_PORT} (timeout=${RDZV_TIMEOUT}s)"
       echo "================================================="
 
-      if [ "$NODE_RANK" -eq 0 ]; then
-        ROLE="master"
-      else
-        ROLE="worker"
-      fi
-      echo ">>> This node is acting as: $ROLE"
+      ROLE=$([ "$NODE_RANK" -eq 0 ] && echo "master" || echo "worker")
+      echo "[$ROLE] RUN_ID=$RUN_ID  batch/micro=$BATCH/$MICRO_BATCH  PP/TP/DP=$PP/$TP/$DP"
 
       if [ "$ROLE" = "worker" ]; then
         echo "Waiting for master rendezvous (${MASTER_ADDR}:${RDZV_PORT})..."
@@ -106,9 +119,9 @@ for BATCH in "${BATCH_SIZES[@]}"; do
           sleep 3
           echo "Still waiting for master..."
         done
-        echo "Master is up, starting torchrun."
       fi
 
+      SECONDS=0
       CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 torchrun \
         --nproc_per_node=$NPROC_PER_NODE \
         --nnodes=$NNODES \
@@ -126,42 +139,41 @@ for BATCH in "${BATCH_SIZES[@]}"; do
           --pp_size $PP \
           --tp_size $TP \
           --dp_size $DP
+      
       EXIT_CODE=$?
+      ELAPSED_SEC=$SECONDS
 
-
-      echo ">>> Cleaning up GPU processes..."
-      # Kill torchrun / python / CUDA processes that might hang
       pkill -9 -f "torchrun" || true
       pkill -9 -f "pp_train_llama.py" || true
       pkill -9 -f "python" || true
-      sleep 3
-      # Check if any GPU still in use, and free it
+      sleep 2
       fuser -v /dev/nvidia* -k 2>/dev/null || true
-      echo ">>> GPU cleanup complete."
 
-
-      if [ "$ROLE" = "master" ]; then
-        # $? 변수로 종료 상태 코드 확인
+      if [ "$NODE_RANK" -eq 0 ]; then
         if [ $EXIT_CODE -eq 0 ]; then
-          echo "SUCCESS: pp_train_llama.py completed successfully."
+          # 성공: 경과시간 숫자 기록
+          echo "${BATCH},${MICRO_BATCH},${PP},${TP},${DP},${ELAPSED_SEC}" >> "$RESULT_FILEPATH"
+          echo "SUCCESS → recorded ${ELAPSED_SEC}s"
           echo "--- END ---"
           break 3
         else
-          echo "FAILED (exit=$EXIT_CODE)"
+          # 실패: 상태 문자열 기록
+          STATUS_STR=$(status_from_exit "$EXIT_CODE")
+          echo "${BATCH},${MICRO_BATCH},${PP},${TP},${DP},${STATUS_STR}" >> "$RESULT_FILEPATH"
+          echo "FAILED (exit=$EXIT_CODE) → recorded '${STATUS_STR}'"
         fi
+
+        # 중복 제거(헤더 유지)
+        ( head -n 1 "$RESULT_FILEPATH" && tail -n +2 "$RESULT_FILEPATH" | sort -u ) > "${RESULT_FILEPATH}.tmp" && mv "${RESULT_FILEPATH}.tmp" "$RESULT_FILEPATH"
       fi
 
-      echo ">>> Done: batch=$BATCH, micro_batch=$MICRO_BATCH, pp=$PP, tp=$TP, dp=$DP"
-      echo ""
-
-      # 결과 파일에서 중복 라인 제거 (헤더 유지)
-      ( head -n 1 "$RESULT_FILEPATH" && tail -n +2 "$RESULT_FILEPATH" | sort -u ) > "${RESULT_FILEPATH}.tmp" && mv "${RESULT_FILEPATH}.tmp" "$RESULT_FILEPATH"
-      echo ">>> Duplicate lines removed from $RESULT_FILEPATH"
-
-      sleep 10
+      sleep 5
     done
   done
 done
 
 # 결과 파일 정렬
-(head -n 1 "$RESULT_FILEPATH" && tail -n +2 "$RESULT_FILEPATH" | sort -t',' -k1,1n -k2,2n) > "${RESULT_FILEPATH}.tmp" && mv "${RESULT_FILEPATH}.tmp" "$RESULT_FILEPATH"
+if [ "$NODE_RANK" -eq 0 ]; then
+  (head -n 1 "$RESULT_FILEPATH" && tail -n +2 "$RESULT_FILEPATH" | sort -t',' -k1,1n -k2,2n -k3,3n -k4,4n -k5,5n) > "${RESULT_FILEPATH}.tmp" && mv "${RESULT_FILEPATH}.tmp" "$RESULT_FILEPATH"
+  echo ">> Master wrote results to: $RESULT_FILEPATH"
+fi
