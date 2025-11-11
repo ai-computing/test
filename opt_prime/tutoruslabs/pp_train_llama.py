@@ -147,6 +147,15 @@ try:
     nbatches = len(dataloader)
     print(f"nbatches={nbatches}")
 
+
+    # 1F1B 안전 가드
+    num_mb = args.batch_size // args.micro_batch_size
+    if num_mb < args.pp_size:
+        print(f"ERROR: num_microbatches({num_mb}) < pp_size({args.pp_size}) → 1f1b 데드락 위험")
+        EXIT_CODE = 1
+        sys.exit(EXIT_CODE)
+
+
     epochs = 1 # The number of epochs
 
     def train():
