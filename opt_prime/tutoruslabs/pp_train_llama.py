@@ -149,14 +149,6 @@ try:
 
     epochs = 1 # The number of epochs
 
-    num_mb = args.batch_size // args.micro_batch_size
-    if args.batch_size % args.micro_batch_size != 0:
-        raise RuntimeError("batch_size % micro_batch_size != 0 → 1f1b 위험")
-
-    if num_mb < args.pp_size:
-        raise RuntimeError(f"num_microbatches({num_mb}) < pp_size({args.pp_size}) → 1f1b 데드락 위험")
-
-
     def train():
 
         optimus_p.train() # turn on the train mode
@@ -213,9 +205,7 @@ try:
 
     for epoch in range(1, epochs + 1):
         epoch_start_time = time.time()
-        print("=== TRAIN START ===\n")
         train()
-        print("=== TRAIN FINISHED ===\n")
         scheduler.step()
 
     if optimus_p.get_rank() == 0:
@@ -227,6 +217,7 @@ try:
 
         EXIT_CODE = 0
 
+    """
     if dist.is_initialized():
         try:
             dist.barrier()
@@ -236,7 +227,7 @@ try:
             dist.destroy_process_group()
         except Exception as e:
             print(f"Cleanp on rank {optimus_p.get_rank()}: {e}")
-
+    """
         print(f"[rank:{optimus_p.get_rank()}, run completed ...")
     
 
@@ -264,7 +255,7 @@ finally:
             global_failed = (flag.item() > 0)
             if global_failed and EXIT_CODE == 0:
                 EXIT_CODE = 40  # peer failed
-                
+
             #dist.barrier()
             #torch.cuda.synchronize()
             dist.destroy_process_group()
@@ -272,7 +263,7 @@ finally:
         except Exception as e:
             print(f"[rank:{dist.get_rank()}] destroy_process_group failed: {e}")
             if EXIT_CODE == 0:
-                EXIT_CODE = 40
+                EXIT_CODE = 41
 
 print(">>> EXIT_CODE: ", EXIT_CODE)
 sys.exit(EXIT_CODE)
