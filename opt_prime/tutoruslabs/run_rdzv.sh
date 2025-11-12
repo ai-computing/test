@@ -54,7 +54,7 @@ status_from_exit() {
     40) echo "PEER FAILED" ;;
     41) echo "FINALIZE ERROR" ;;
     50) echo "TIMEOUT" ;;
-    60)  echo "#MB < PP(1F1B DEADLOCK)" ;;
+    60) echo "#MB < PP(1F1B DEADLOCK)" ;;
     *)  echo "FAIL($1)" ;;
   esac
 }
@@ -140,9 +140,16 @@ for BATCH in "${BATCH_SIZES[@]}"; do
           --micro_batch_size $MICRO_BATCH \
           --pp_size $PP \
           --tp_size $TP \
-          --dp_size $DP
-      
+          --dp_size $DP \
+          --run_id "$RUN_ID"
       EXIT_CODE=$?
+      sleep 1
+
+      EXIT_LOG=$(ls tmp/exitcode_${RUN_ID}.txt 2>/dev/null | tail -n 1)
+      if [ -f "$EXIT_LOG" ]; then
+        EXIT_CODE=$(cat "$EXIT_LOG")
+      fi
+
       ELAPSED_SEC=$SECONDS
 
       pkill -9 -f "torchrun" || true
@@ -175,7 +182,7 @@ for BATCH in "${BATCH_SIZES[@]}"; do
 done
 
 # 결과 파일 정렬
-if [ "$NODE_RANK" -eq 0 ]; then
-  (head -n 1 "$RESULT_FILEPATH" && tail -n +2 "$RESULT_FILEPATH" | sort -t',' -k1,1n -k2,2n -k3,3n -k4,4n -k5,5n) > "${RESULT_FILEPATH}.tmp" && mv "${RESULT_FILEPATH}.tmp" "$RESULT_FILEPATH"
-  echo ">> Master wrote results to: $RESULT_FILEPATH"
-fi
+#if [ "$NODE_RANK" -eq 0 ]; then
+#  (head -n 1 "$RESULT_FILEPATH" && tail -n +2 "$RESULT_FILEPATH" | sort -t',' -k1,1n -k2,2n -k3,3n -k4,4n -k5,5n) > "${RESULT_FILEPATH}.tmp" && mv "${RESULT_FILEPATH}.tmp" "$RESULT_FILEPATH"
+#  echo ">> Master wrote results to: $RESULT_FILEPATH"
+#fi

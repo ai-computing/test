@@ -42,6 +42,7 @@ parser.add_argument("--micro_batch_size", type=int, default=4)
 parser.add_argument("--pp_size", type=int, default=2)
 parser.add_argument("--tp_size", type=int, default=2)
 parser.add_argument("--dp_size", type=int, default=2)
+parser.add_argument("--run_id", type=str)
 parser.add_argument("--llama_access_token", type=str, required=True)
 args, unknown = parser.parse_known_args()
 
@@ -56,6 +57,22 @@ if not os.path.isfile(RESULT_FILEPATH):
 def write_result(batch_size, micro_batch_size, pp_size, tp_size, dp_size, result, result_filepath):
     with open(result_filepath, "a", encoding="utf-8") as file:
         file.write(f"{batch_size},{micro_batch_size},{pp_size},{tp_size},{dp_size},{result}\n")
+
+def save_exit_code(exit_code: int, run_id: str):
+    """
+    rank 0 프로세스에서 EXIT_CODE를 /tmp 디렉터리에 기록합니다.
+    다른 랭크에서는 아무 작업도 하지 않습니다.
+    """
+    try:
+        # rank0만 기록
+        if os.environ.get("RANK", "0") == "0":
+            log_path = f"tmp/exitcode_{run_id}.txt"
+            with open(log_path, "w", encoding="utf-8") as f:
+                f.write(str(exit_code))
+            print(f"[rank:0] EXIT_CODE {exit_code} saved to {log_path}")
+    except Exception as e:
+        print(f"[rank:0] Failed to save EXIT_CODE file: {e}")
+        pass
 
 EXIT_CODE=0
 
@@ -153,6 +170,7 @@ try:
     if num_mb < args.pp_size:
         print(f"ERROR: num_microbatches({num_mb}) < pp_size({args.pp_size}) → 1f1b 데드락 위험")
         EXIT_CODE = 60
+        save_exit_code(EXIT_CODE, args.run_id)
         sys.exit(EXIT_CODE)
 
 
@@ -266,7 +284,7 @@ finally:
             except Exception as e:
                 print(f"[rank:{os.environ.get('RANK','?')}] destroy_process_group failed: {e}")
                 if EXIT_CODE == 0:
-                    EXIT_CODE = 41
+                    EXIT_CODE = 40
         else:
             # PG가 없으면 아무 것도 하지 않음
             pass
@@ -275,5 +293,7 @@ finally:
         if EXIT_CODE == 0:
             EXIT_CODE = 41
 
+
 print(">>> EXIT_CODE: ", EXIT_CODE)
+save_exit_code(EXIT_CODE, args.run_id)
 sys.exit(EXIT_CODE)
