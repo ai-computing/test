@@ -49,6 +49,9 @@ args, unknown = parser.parse_known_args()
 RESULT_DIR = "results"
 os.makedirs(RESULT_DIR, exist_ok=True)
 
+TMP_DIR = "tmp"
+os.makedirs(TMP_DIR, exist_ok=True)
+
 RESULT_FILEPATH = os.path.join(RESULT_DIR, args.model_name.split("/")[1] + ".csv")
 if not os.path.isfile(RESULT_FILEPATH):
     with open(RESULT_FILEPATH, "w", encoding="utf-8") as f:
