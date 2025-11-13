@@ -61,9 +61,10 @@ def write_result(batch_size, micro_batch_size, pp_size, tp_size, dp_size, result
     with open(result_filepath, "a", encoding="utf-8") as file:
         file.write(f"{batch_size},{micro_batch_size},{pp_size},{tp_size},{dp_size},{result}\n")
 
-def save_exit_code(exit_code: int, run_id: str):
+def save_exit_code(exit_code: int, run_id: str, elapsed_time: float | None = None):
     """
     rank 0 프로세스에서 EXIT_CODE를 /tmp 디렉터리에 기록합니다.
+    EXIT_CODE가 0이고 elapsed_time이 주어지면 함께 기록합니다.
     다른 랭크에서는 아무 작업도 하지 않습니다.
     """
     try:
@@ -71,13 +72,19 @@ def save_exit_code(exit_code: int, run_id: str):
         if os.environ.get("RANK", "0") == "0":
             log_path = f"tmp/exitcode_{run_id}.txt"
             with open(log_path, "w", encoding="utf-8") as f:
-                f.write(str(exit_code))
+                if exit_code == 0 and elapsed_time is not None:
+                    # "0,123.456" 형식으로 기록
+                    f.write(f"{exit_code},{elapsed_time:.3f}")
+                else:
+                    # 그 외에는 exit_code만 기록
+                    f.write(str(exit_code))
             print(f"[rank:0] EXIT_CODE {exit_code} saved to {log_path}")
     except Exception as e:
         print(f"[rank:0] Failed to save EXIT_CODE file: {e}")
         pass
 
 EXIT_CODE=0
+ELAPSED_TIME = None
 
 try:
     access_token = args.llama_access_token
@@ -240,9 +247,9 @@ try:
 
     if optimus_p.get_rank() == 0:
         tock = time.time()
-        elapsed_time = tock - tick
+        ELAPSED_TIME = tock - tick
 
-        print('Time elapsed: %.3f sec ' % (elapsed_time))
+        print('Time elapsed: %.3f sec ' % (ELAPSED_TIME))
         #write_result(args.batch_size, args.micro_batch_size, args.pp_size, args.tp_size, args.dp_size, f"{elapsed_time:.3f}", RESULT_FILEPATH)
 
         EXIT_CODE = 0
@@ -297,6 +304,6 @@ finally:
             EXIT_CODE = 41
 
 
-print(">>> EXIT_CODE: ", EXIT_CODE)
-save_exit_code(EXIT_CODE, args.run_id)
+print(">>> EXIT_CODE: ", EXIT_CODE, ELAPSED_TIME)
+save_exit_code(EXIT_CODE, args.run_id, ELAPSED_TIME)
 sys.exit(EXIT_CODE)

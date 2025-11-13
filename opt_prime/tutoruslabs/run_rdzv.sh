@@ -123,7 +123,7 @@ for BATCH in "${BATCH_SIZES[@]}"; do
         done
       fi
 
-      SECONDS=0
+      SECONDS=0 # for fallback
       CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 torchrun \
         --nproc_per_node=$NPROC_PER_NODE \
         --nnodes=$NNODES \
@@ -145,12 +145,25 @@ for BATCH in "${BATCH_SIZES[@]}"; do
       EXIT_CODE=$?
       sleep 1
 
+      # tmp/exitcode_<RUN_ID>.txt 에서 EXIT_CODE와 elapsed_time(sec) 같이 읽기
       EXIT_LOG=$(ls tmp/exitcode_${RUN_ID}.txt 2>/dev/null | tail -n 1)
+      ELAPSED_SEC=""
       if [ -f "$EXIT_LOG" ]; then
-        EXIT_CODE=$(cat "$EXIT_LOG")
+        EXIT_LINE=$(cat "$EXIT_LOG")
+        # "0,123.456" 형식이면 EXIT_CODE, ELAPSED_SEC 분리
+        if [[ "$EXIT_LINE" == *,* ]]; then
+          EXIT_CODE="${EXIT_LINE%%,*}"
+          ELAPSED_SEC="${EXIT_LINE##*,}"
+        else
+          # "10" 같이 코드만 있을 때
+          EXIT_CODE="$EXIT_LINE"
+        fi
       fi
 
-      ELAPSED_SEC=$SECONDS
+      # 혹시 성공인데 ELAPSED_SEC가 비어 있으면 SECONDS로 fallback
+      if [ "$EXIT_CODE" -eq 0 ] && [ -z "$ELAPSED_SEC" ]; then
+        ELAPSED_SEC=$SECONDS
+      fi
 
       pkill -9 -f "torchrun" || true
       pkill -9 -f "pp_train_llama.py" || true
@@ -173,7 +186,7 @@ for BATCH in "${BATCH_SIZES[@]}"; do
         fi
 
         # 중복 제거(헤더 유지)
-        ( head -n 1 "$RESULT_FILEPATH" && tail -n +2 "$RESULT_FILEPATH" | sort -u ) > "${RESULT_FILEPATH}.tmp" && mv "${RESULT_FILEPATH}.tmp" "$RESULT_FILEPATH"
+        #( head -n 1 "$RESULT_FILEPATH" && tail -n +2 "$RESULT_FILEPATH" | sort -u ) > "${RESULT_FILEPATH}.tmp" && mv "${RESULT_FILEPATH}.tmp" "$RESULT_FILEPATH"
       fi
 
       sleep 5
