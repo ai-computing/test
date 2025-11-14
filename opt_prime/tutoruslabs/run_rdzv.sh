@@ -176,8 +176,8 @@ for BATCH in "${BATCH_SIZES[@]}"; do
           # 성공: 경과시간 숫자 기록
           echo "${BATCH},${MICRO_BATCH},${PP},${TP},${DP},${ELAPSED_SEC}" >> "$RESULT_FILEPATH"
           echo "SUCCESS → recorded ${ELAPSED_SEC}s"
-          echo "--- END ---"
-          break 3
+          #echo "--- END ---"
+          #break 3
         else
           # 실패: 상태 문자열 기록
           STATUS_STR=$(status_from_exit "$EXIT_CODE")
