@@ -129,8 +129,8 @@ for BATCH in "${BATCH_SIZES[@]}"; do
       fi
 
       SECONDS=0 # for fallback
-      timeout ${MAX_TIME}s \
-      CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 torchrun \
+      timeout ${MAX_TIME}s env CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 \
+      torchrun \
         --nproc_per_node=$NPROC_PER_NODE \
         --nnodes=$NNODES \
         --node_rank=$NODE_RANK \
@@ -152,7 +152,7 @@ for BATCH in "${BATCH_SIZES[@]}"; do
       if [ "$EXIT_CODE" -eq 124 ]; then
         EXIT_CODE=50
       fi
-      
+
       sleep 1
 
       # tmp/exitcode_<RUN_ID>.txt 에서 EXIT_CODE와 elapsed_time(sec) 같이 읽기
