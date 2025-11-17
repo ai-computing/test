@@ -100,7 +100,7 @@ for BATCH in "${BATCH_SIZES[@]}"; do
       RUN_ID="${MODEL_FILENAME}-${BATCH}-${MICRO_BATCH}-${PP}-${TP}-${DP}"
       
       COUNTER=$((COUNTER+1))
-      RDZV_PORT=$((29500 + (COUNTER % 200)))
+      RDZV_PORT=29500 #$((29500 + (COUNTER % 200)))
 
       RDZV_TIMEOUT=900
 
