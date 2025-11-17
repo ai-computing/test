@@ -34,9 +34,10 @@ NNODES="${5:-8}"
 NPROC_PER_NODE="${6:-8}"
 
 WORLD_SIZE=$(( NNODES * NPROC_PER_NODE ))
+MAX_TIME=3600
 
 #BATCH_SIZES=(4096 2048 1024 512 256 128 64 32)
-BATCH_SIZES=(512 256 128 64 32)
+BATCH_SIZES=(512 256)
 MICRO_BATCH_SIZES=(4 8 16 32 64)
 
 RESULT_DIR="results"
@@ -128,6 +129,7 @@ for BATCH in "${BATCH_SIZES[@]}"; do
       fi
 
       SECONDS=0 # for fallback
+      timeout ${MAX_TIME}s \
       CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 torchrun \
         --nproc_per_node=$NPROC_PER_NODE \
         --nnodes=$NNODES \
@@ -147,6 +149,10 @@ for BATCH in "${BATCH_SIZES[@]}"; do
           --dp_size $DP \
           --run_id "$RUN_ID"
       EXIT_CODE=$?
+      if [ "$EXIT_CODE" -eq 124 ]; then
+        EXIT_CODE=50
+      fi
+      
       sleep 1
 
       # tmp/exitcode_<RUN_ID>.txt 에서 EXIT_CODE와 elapsed_time(sec) 같이 읽기
