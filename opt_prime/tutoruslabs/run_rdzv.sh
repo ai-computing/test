@@ -132,7 +132,7 @@ for BATCH in "${BATCH_SIZES[@]}"; do
         --rdzv_backend=c10d \
         --rdzv_endpoint="${MASTER_ADDR}:${RDZV_PORT}" \
         --rdzv_id="${RUN_ID}" \
-        --rdzv_conf="timeout=${RDZV_TIMEOUT},join_timeout=120" \
+        --rdzv_conf="timeout=${RDZV_TIMEOUT}" \
         --max_restarts=0 \
         pp_train_llama.py \
           --llama_access_token "$LLAMA_TOKEN" \
