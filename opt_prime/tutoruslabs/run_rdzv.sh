@@ -3,8 +3,11 @@
 export NCCL_DEBUG=ERROR
 # 피어가 죽으면 다른 랭크도 통신 에러로 즉시 터지도록
 export NCCL_ASYNC_ERROR_HANDLING=1
-export NCCL_BLOCKING_WAIT=0
+#export NCCL_BLOCKING_WAIT=0
 #export TORCH_DIST_INIT_BARRIER=1
+
+unset NCCL_BLOCKING_WAIT
+export TORCH_NCCL_HEARTBEAT_TIMEOUT_SEC=100
 
 ############################################
 # User params
