@@ -7,7 +7,7 @@ export NCCL_ASYNC_ERROR_HANDLING=1
 #export TORCH_DIST_INIT_BARRIER=1
 
 unset NCCL_BLOCKING_WAIT
-export TORCH_NCCL_HEARTBEAT_TIMEOUT_SEC=100
+export TORCH_NCCL_HEARTBEAT_TIMEOUT_SEC=3600
 
 export HF_DATASETS_OFFLINE=1
 export HF_HUB_OFFLINE=1
@@ -108,7 +108,7 @@ for BATCH in "${BATCH_SIZES[@]}"; do
       COUNTER=$((COUNTER+1))
       RDZV_PORT=$((29500 + (COUNTER % 200)))
 
-      RDZV_TIMEOUT=300
+      RDZV_TIMEOUT=3600
 
       echo "================================================="
       echo "RUN_ID            : $RUN_ID"
