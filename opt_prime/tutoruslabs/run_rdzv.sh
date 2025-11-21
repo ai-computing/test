@@ -9,6 +9,7 @@ export NCCL_ASYNC_ERROR_HANDLING=1
 unset NCCL_BLOCKING_WAIT
 export TORCH_NCCL_HEARTBEAT_TIMEOUT_SEC=100
 
+export HF_DATASETS_OFFLINE=1
 export HF_HUB_OFFLINE=1
 
 ############################################

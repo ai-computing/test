@@ -122,7 +122,7 @@ try:
     tokenizer.pad_token = tokenizer.eos_token
     tokenizer.pad_token_id = tokenizer.eos_token_id
 
-    model = AutoModelForCausalLM.from_pretrained(args.model_name, token=access_token, use_cache=False)
+    model = AutoModelForCausalLM.from_pretrained(args.model_name, token=access_token, use_cache=True)
 
     def get_total_params(module: torch.nn.Module):
         total_params = 0
