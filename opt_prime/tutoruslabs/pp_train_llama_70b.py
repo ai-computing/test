@@ -149,6 +149,12 @@ try:
 
 
     ###
+
+    batch_size = args.batch_size
+    #micro_batch_size = int(os.environ["WORLD_SIZE"]) // 2 # TODO
+    micro_batch_size = args.micro_batch_size
+
+    
     for i in range(local_world_size):
         if local_rank == i:
             model = AutoModelForCausalLM.from_pretrained("meta-llama/Llama-3.3-70B-Instruct", token=access_token, use_cache=False)
