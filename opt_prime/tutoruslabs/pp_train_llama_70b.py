@@ -163,7 +163,7 @@ try:
                 print('Total parameters in model: {:,}'.format(get_total_params(model)))
 
             #optimus_p = Optimus_p(model, micro_batch_size, use_gpu=True, tp_size=2, activation_ckpt=True, force_free_mem=True, display_mem=True, swap_opt_in_fwdbwd=True, swap_model_in_optstep=True, ir_analyze=IR_Anal.PARALLEL) ## IR_Anal.PARALLEL
-            optimus_p = Optimus_p(model, micro_batch_size, use_gpu=True, pp_size=args.pp_size, tp_size=args.tp_size, dp_size=args.dp_size, activation_ckpt=False, force_free_mem=True, display_mem=True, swap_opt_in_fwdbwd=True, swap_model_in_optstep=True, ir_analyze=IR_Anal.PARALLEL, pre_barrier=group_gloo) ## IR_Anal.PARALLEL
+            optimus_p = Optimus_p(model, micro_batch_size, use_gpu=True, pp_size=args.pp_size, tp_size=args.tp_size, dp_size=args.dp_size, activation_ckpt=True, force_free_mem=True, display_mem=True, swap_opt_in_fwdbwd=False, swap_model_in_optstep=False, ir_analyze=IR_Anal.PARALLEL, pre_barrier=group_gloo) ## IR_Anal.PARALLEL
             #optimus_p = Optimus_p(model, micro_batch_size, use_gpu=True, dp_size=2, activation_ckpt=False, force_free_mem=True, display_mem=True, swap_opt_in_fwdbwd=True, swap_model_in_optstep=True, ir_analyze=IR_Anal.PARALLEL, pre_barrier=group_gloo) ## IR_Anal.PARALLEL
             print(f" rank={optimus_p.get_rank()} ...")
 
