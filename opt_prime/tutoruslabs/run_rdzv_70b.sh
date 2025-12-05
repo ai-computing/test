@@ -108,7 +108,7 @@ for BATCH in "${BATCH_SIZES[@]}"; do
       COUNTER=$((COUNTER+1))
       RDZV_PORT=$((29500 + (COUNTER % 200)))
 
-      RDZV_TIMEOUT=3600
+      RDZV_TIMEOUT=18000
 
       echo "================================================="
       echo "RUN_ID            : $RUN_ID"
