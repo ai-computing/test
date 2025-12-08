@@ -100,9 +100,17 @@ for BATCH in "${BATCH_SIZES[@]}"; do
       continue
     fi
 
+    NUM_MB=$(( BATCH / MICRO_BATCH ))
+
     for COMBO in "${COMBINATIONS[@]}"; do
       read PP TP DP <<<"$COMBO"
-      
+
+      # Deadlock 조건만 샘플링: num_mb < pp_size 인 경우만 실험
+      if [ "$NUM_MB" -ge "$PP" ]; then
+        echo ">>> Skip: batch=$BATCH, micro_batch=$MICRO_BATCH, PP=$PP (num_mb=${NUM_MB} >= PP → 1F1B 가드 조건 아님)"
+        continue
+      fi
+
       RUN_ID="${MODEL_FILENAME}-${BATCH}-${MICRO_BATCH}-${PP}-${TP}-${DP}"
       
       COUNTER=$((COUNTER+1))
